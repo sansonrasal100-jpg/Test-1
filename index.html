@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Forecasting Simulation with Step-by-Step Calculations</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 30px; }
+table { border-collapse: collapse; margin-top: 15px; }
+th, td { border: 1px solid #999; padding: 6px 10px; text-align: center; }
+input[type=number] { width: 90px; }
+button { margin-top: 12px; padding: 6px 12px; }
+h3 { margin-top: 25px; }
+</style>
+</head>
+<body>
+
+<h2>Forecasting Simulation: Moving Average & Exponential Smoothing</h2>
+
+<h3>Step 1: Enter Historical Data</h3>
+<table id="dataTable">
+<tr><th>Period</th><th>Actual Demand</th></tr>
+<tr><td>1</td><td><input type="number"></td></tr>
+<tr><td>2</td><td><input type="number"></td></tr>
+<tr><td>3</td><td><input type="number"></td></tr>
+</table>
+
+<button onclick="addRow()">Add Period</button>
+
+<h3>Step 2: Forecasting Parameters</h3>
+Method:
+<select id="method">
+<option value="ma">Moving Average</option>
+<option value="es">Exponential Smoothing</option>
+</select>
+
+<br><br>
+Moving Average Period (k):
+<input type="number" id="k" value="3">
+
+<br><br>
+Smoothing Constant α:
+<input type="number" id="alpha" value="0.3" step="0.01">
+
+<br><br>
+<button onclick="calculate()">Calculate Forecast</button>
+
+<h3>Step 3: Step-by-Step Calculations</h3>
+<div id="calcTable"></div>
+
+<h3>Step 4: Accuracy Measures & Next Forecast</h3>
+<div id="result"></div>
+
+<script>
+function addRow() {
+ let t = document.getElementById("dataTable");
+ let r = t.insertRow();
+ r.insertCell(0).innerHTML = t.rows.length - 1;
+ r.insertCell(1).innerHTML = "<input type='number'>";
+}
+
+function calculate() {
+ let t = document.getElementById("dataTable");
+ let a = [];
+ for (let i = 1; i < t.rows.length; i++) {
+   let v = t.rows[i].cells[1].children[0].value;
+   if (v !== "") a.push(parseFloat(v));
+ }
+
+ if (a.length < 2) {
+   alert("Please enter at least two observations.");
+   return;
+ }
+
+ let f = [];
+ let m = document.getElementById("method").value;
+ let k = parseInt(document.getElementById("k").value);
+ let alpha = parseFloat(document.getElementById("alpha").value);
+
+ if (m === "ma") {
+   for (let i = k; i < a.length; i++) {
+     let s = 0;
+     for (let j = i - k; j < i; j++) s += a[j];
+     f[i] = s / k;
+   }
+ } else {
+   f[1] = a[0];
+   for (let i = 2; i < a.length; i++) {
+     f[i] = alpha * a[i-1] + (1-alpha) * f[i-1];
+   }
+ }
+
+ let tableHTML = "<table><tr><th>Period</th><th>Actual</th><th>Forecast</th><th>Error</th><th>|Error|</th><th>Error²</th><th>|Error|/Actual</th></tr>";
+ let mse = 0, mad = 0, mape = 0, n = 0;
+
+ for (let i = 1; i < a.length; i++) {
+   if (f[i] !== undefined) {
+     let e = a[i] - f[i];
+     tableHTML += "<tr><td>"+(i+1)+"</td><td>"+a[i].toFixed(2)+"</td><td>"+f[i].toFixed(2)+"</td><td>"+e.toFixed(2)+"</td><td>"+Math.abs(e).toFixed(2)+"</td><td>"+(e*e).toFixed(2)+"</td><td>"+(Math.abs(e/a[i])).toFixed(4)+"</td></tr>";
+     mse += e*e;
+     mad += Math.abs(e);
+     mape += Math.abs(e/a[i]);
+     n++;
+   }
+ }
+
+ tableHTML += "</table>";
+ document.getElementById("calcTable").innerHTML = tableHTML;
+
+ mse /= n; mad /= n; mape = (mape/n)*100;
+
+ let next;
+ if (m === "ma") {
+   let s = a.slice(-k).reduce((x,y)=>x+y,0);
+   next = s/k;
+ } else {
+   next = alpha*a[a.length-1] + (1-alpha)*f[a.length-1];
+ }
+
+ document.getElementById("result").innerHTML =
+ "<b>Forecast for Next Period:</b> "+next.toFixed(2)+"<br><br>" +
+ "<b>MSE:</b> "+mse.toFixed(2)+"<br>" +
+ "<b>MAD:</b> "+mad.toFixed(2)+"<br>" +
+ "<b>MAPE:</b> "+mape.toFixed(2)+" %";
+}
+</script>
+
+</body>
+</html>
